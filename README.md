@@ -2,6 +2,12 @@
 
 Official documentation: https://wiki.web2sms.ro/api-web2sms-rest-client/2-rest-api-overview
 
+Install it via:
+```
+composer require itpalert/web2sms
+```
+
+
 ```
 use ITPalert\Web2sms\Credentials\Basic;
 use ITPalert\Web2sms\Client;
