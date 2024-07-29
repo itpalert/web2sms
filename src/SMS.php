@@ -27,6 +27,10 @@ class SMS
 
     protected string $nonce = '';
 
+    protected bool $visible = true;
+
+    protected string $clientRef = '';
+
     public function __construct(protected string $to, protected string $from, protected string $message, string $type = 'text')
     {
         $this->setType($type);
