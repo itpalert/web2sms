@@ -19,6 +19,8 @@ class SMS
      */
     protected string $type = 'text';
 
+    protected string $message = '';
+
     protected ?string $deliveryReceiptCallback = '';
 
     protected bool $requestDeliveryReceipt = true;
@@ -31,9 +33,10 @@ class SMS
 
     protected string $clientRef = '';
 
-    public function __construct(protected string $to, protected string $from, protected string $message, string $type = 'text')
+    public function __construct(protected string $to, protected string $from, string $message, string $type = 'text')
     {
         $this->setType($type);
+        $this->setMessage($message);
     }
 
     public function getTo(): string
@@ -142,12 +145,20 @@ class SMS
         return $this;
     }
 
-    public function getMessage(): string
+    public function setMessage(string $message): self
     {
         if ($this->getType() === 'text' && ! self::isGsm7($this->message)) {
-            return (new Converter())->convertUtf8ToGsm($this->message, true, '?');
+            $this->message = (new Converter())->convertUtf8ToGsm($message, true, '?');
+        }
+        else {
+            $this->message = $message;
         }
 
+        return $this;
+    }
+    
+    public function getMessage(): string
+    {
         return $this->message;
     }
 
