@@ -155,7 +155,7 @@ class Client
         $string .= $message->getFrom();
         $string .= $message->getTo();
         $string .= $message->getMessage();
-        $string .= $message->getVisible()?: '';
+        $string .= $message->getDisplayedMessage();
         $string .= $message->getSchedule();
         $string .= $message->getDeliveryReceiptCallback();
         $string .= $this->credentials->api_secret;

@@ -21,17 +21,15 @@ class SMS
 
     protected string $message = '';
 
-    protected ?string $deliveryReceiptCallback = '';
-
-    protected bool $requestDeliveryReceipt = true;
-
-    protected ?string $schedule = '';
-
     protected string $nonce = '';
 
-    protected bool $visible = true;
+    protected ?string $deliveryReceiptCallback = null;
 
-    protected string $clientRef = '';
+    protected ?string $schedule = null;
+
+    protected ?string $displayedMessage = null;
+
+    protected ?string $clientRef = null;
 
     public function __construct(protected string $to, protected string $from, string $message, string $type = 'text')
     {
@@ -54,24 +52,9 @@ class SMS
         return $this->type;
     }
 
-    public function setType(string $type): SMS
+    public function setType(string $type): self
     {
         $this->type = $type;
-
-        return $this;
-    }
-
-    public function getRequestDeliveryReceipt(): bool
-    {
-        return $this->requestDeliveryReceipt;
-    }
-
-    /**
-     * @return $this
-     */
-    public function setRequestDeliveryReceipt(bool $requestDeliveryReceipt): self
-    {
-        $this->requestDeliveryReceipt = $requestDeliveryReceipt;
 
         return $this;
     }
@@ -86,13 +69,12 @@ class SMS
      */
     public function setDeliveryReceiptCallback(string $deliveryReceiptCallback): self
     {
-        $this->deliveryReceiptCallback = $deliveryReceiptCallback;
-        $this->setRequestDeliveryReceipt(true);
+        $this->deliveryReceiptCallback = (strlen($deliveryReceiptCallback) > 0) ? $deliveryReceiptCallback : null;
 
         return $this;
     }
 
-    public function getClientRef(): string
+    public function getClientRef(): ?string
     {
         return $this->clientRef;
     }
@@ -106,27 +88,27 @@ class SMS
             throw new InvalidArgumentException('Client Ref can be no more than 40 characters');
         }
 
-        $this->clientRef = $clientRef;
+        $this->clientRef = (strlen($clientRef) > 0) ? $clientRef : null;
 
         return $this;
     }
 
-    public function getVisible(): bool
+    public function getDisplayedMessage(): ?string
     {
-        return $this->visible;
+        return $this->displayedMessage;
     }
 
      /**
      * @return $this
      */
-    public function setVisible(bool $visible): self
+    public function setDisplayedMessage(string $displayedMessage): self
     {
-        $this->visible = $visible;
+        $this->displayedMessage = (strlen($displayedMessage) > 0) ? $displayedMessage : null;
 
         return $this;
     }
 
-    public function getSchedule(): string
+    public function getSchedule(): ?string
     {
         return $this->schedule;
     }
@@ -203,19 +185,19 @@ class SMS
             'nonce' => $this->getNonce(),
         ];
 
-        if ($this->getRequestDeliveryReceipt() && !is_null($this->getDeliveryReceiptCallback())) {
+        if (!is_null($this->getDeliveryReceiptCallback())) {
             $data['callbackUrl'] = $this->getDeliveryReceiptCallback();
         }
 
-        if ($this->clientRef) {
+        if (!is_null($this->getClientRef())) {
             $data['userData'] = $this->getClientRef();
         }
 
-        if ($this->visible) {
-            $data['visibleMessage'] = $this->getVisible();
+        if (!is_null($this->getDisplayedMessage())) {
+            $data['visibleMessage'] = $this->getDisplayedMessage();
         }
 
-        if ($this->schedule) {
+        if (!is_null($this->getSchedule())) {
             $data['scheduleDatetime'] = $this->getSchedule();
         }
 

@@ -43,7 +43,7 @@ $web2smsSms->setClientRef(clientReference);
 
 $web2smsSms->setDeliveryReceiptCallback(CallbackURL);
 
-$web2smsSms->setVisible(true);
+$web2smsSms->setDisplayedMessage('message shown in place of actual sms text');
 
 $web2smsSms->setSchedule('YYYY-MM-DD 10:20:10');
 ```
