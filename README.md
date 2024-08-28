@@ -7,6 +7,46 @@ Install it via:
 composer require itpalert/web2sms
 ```
 
+### Setting up the web2sms service for using with the facade
+
+Add the following env variables to your `.env`:
+
+```php
+// .env
+...
+WEB2SMS_KEY=8c78axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WEB2SMS_SECRET=e9a689cfxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WEB2SMS_ACCOUNT_TYPE=prepaid
+...
+```
+
+Add the folowing to the `config/services.php`
+
+```php
+    'web2sms' => [
+        'key' => env('WEB2SMS_KEY'),
+        'secret' => env('WEB2SMS_SECRET'),
+        'account_type' => env('WEB2SMS_ACCOUNT_TYPE', 'prepaid'),
+    ],
+```
+
+Use it with this:
+
+```php
+use ITPalert\Web2sms\SMS;
+use ITPalert\Web2sms\Facades\Web2sms;
+
+$web2smsSms = new SMS(
+  $to,      //message recipient +40712345678, 40712345678, 0712345678
+  $from,    //message sender number from web2sms platform
+  $content, //message text
+  $type     //text or unicode
+);
+
+Web2sms::send($web2smsSms);
+```
+
+### Setting up the web2sms service for using it with the client
 
 ```
 use ITPalert\Web2sms\Credentials\Basic;

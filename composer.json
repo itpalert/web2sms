@@ -29,6 +29,13 @@
             "ITPalert\\Web2sms\\Tests\\": "tests/"
         }
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ITPalert\\Web2sms\\Web2smsServiceProvider"
+            ]
+        }
+    },
     "config": {
         "sort-packages": true,
         "allow-plugins": {
