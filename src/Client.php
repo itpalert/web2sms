@@ -147,12 +147,14 @@ class Client
     {
         $message->verifyMessage();
 
+        $sender = $message->getFrom() ?: $this->options['sms_from'];
+
         /*signature*/
         $string = $this->credentials->api_key;
         $string .= $message->getNonce();
         $string .= "POST";
         $string .= $this->selectedEndpointURL;
-        $string .= $message->getFrom();
+        $string .= $sender;
         $string .= $message->getTo();
         $string .= $message->getMessage();
         $string .= $message->getDisplayedMessage();
@@ -165,7 +167,10 @@ class Client
 
         $payload = json_encode(array_merge(
             $message->toArray(), 
-            ['apiKey' => $this->credentials->api_key]
+            [
+                'apiKey' => $this->credentials->api_key,
+                'sender' => $sender,
+            ]
         )); // json DATA
 
         $response = $this->getHttpClient()->post($this->apiUrl . $this->selectedEndpointURL, [
