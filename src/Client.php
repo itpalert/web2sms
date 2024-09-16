@@ -147,7 +147,7 @@ class Client
     {
         $message->verifyMessage();
 
-        $sender = $message->getFrom() ?? $this->options['sms_from'] ?? '';
+        $sender = $message->getFrom() !== '' ? $message->getFrom() : ($this->options['sms_from'] ?? '');
 
         /*signature*/
         $string = $this->credentials->api_key;
