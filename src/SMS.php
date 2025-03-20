@@ -13,6 +13,7 @@ use ITPalert\Web2sms\GsmCharsetConverter\Converter;
 class SMS
 {
     public const GSM_7_CHARSET = "\n\f\r !\"\#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_abcdefghijklmnopqrstuvwxyz{|}~ ¡£¤¥§¿ÄÅÆÇÉÑÖØÜßàäåæèéìñòöøùüΓΔΘΛΞΠΣΦΨΩ€";
+    public const GSM_7_EXTENDED = "{}[]^~|€"; // These take 2 bytes in GSM-7
 
     /**
      * @var string
@@ -155,8 +156,39 @@ class SMS
 
     protected static function isGsm7(string $message): bool
     {
-        $fullPattern = "/\A[" . preg_quote(self::GSM_7_CHARSET, '/') . "]*\z/u";
-        return (bool)preg_match($fullPattern, $message);
+        $fullPattern = "/^[" . preg_quote(self::GSM_7_CHARSET . self::GSM_7_EXTENDED, '/') . "]*$/u";
+    
+        return preg_match($fullPattern, $message) === 1;
+    }
+
+    public function getSegmentCount(): int
+    {
+        $message = $this->getMessage();
+
+        if (self::isGsm7($message)) {
+            // GSM-7 Encoding
+            $bytes = 0;
+            $extendedChars = self::GSM_7_EXTENDED; // Avoid redundant function calls
+
+            for ($i = 0, $len = mb_strlen($message, 'UTF-8'); $i < $len; $i++) {
+                $char = mb_substr($message, $i, 1, 'UTF-8');
+                $bytes += (strpos($extendedChars, $char) !== false) ? 2 : 1;
+            }
+
+            $singleSmsLimit = 160;
+            $multiSmsLimit = 153;
+        } else {
+            // Unicode (UTF-16) Encoding
+            $bytes = strlen(mb_convert_encoding($message, 'UTF-16BE', 'UTF-8')) / 2;
+            $singleSmsLimit = 70;
+            $multiSmsLimit = 67;
+        }
+    
+        if ($bytes <= $singleSmsLimit) {
+            return 1;
+        }
+    
+        return ceil($bytes / $multiSmsLimit);
     }
 
     public function verifyMessage(): void

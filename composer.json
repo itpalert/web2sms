@@ -3,7 +3,7 @@
     "description": "Web2sms for laravel.",
     "keywords": ["notifications", "web2sms"],
     "license": "MIT",
-    "version": "1.2.4",
+    "version": "1.3.0",
     "authors": [
         {
             "name": "Gere Attila",
