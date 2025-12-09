@@ -11,6 +11,11 @@ use ITPalert\Web2sms\Credentials\Basic;
 
 use Psr\Http\Message\ResponseInterface;
 
+use ITPalert\Web2sms\Responses\SendResponse;
+use ITPalert\Web2sms\Responses\StatusResponse;
+use ITPalert\Web2sms\Responses\DeleteResponse;
+use ITPalert\Web2sms\Responses\BalanceResponse;
+
 class Client
 {
     const SMS_PLATFORM_URL            = "https://www.web2sms.ro";        // Mandatory 
@@ -143,27 +148,28 @@ class Client
         return $this;
     }
 
-    public function send(SMS $message): ?array
+    public function send(SMS $message): SendResponse
     {
         $message->verifyMessage();
 
-        $sender = $message->getFrom() !== '' ? $message->getFrom() : ($this->options['sms_from'] ?? '');
+        $sender = $message->getFrom() ?: ($this->options['sms_from'] ?? '');
 
-        /*signature*/
-        $string = $this->credentials->api_key;
-        $string .= $message->getNonce();
-        $string .= "POST";
-        $string .= $this->selectedEndpointURL;
-        $string .= $sender;
-        $string .= $message->getTo();
-        $string .= $message->getMessage();
-        $string .= $message->getDisplayedMessage();
-        $string .= $message->getSchedule();
-        $string .= $message->getDeliveryReceiptCallback();
-        $string .= $this->credentials->api_secret;
+        // Build signature
+        $signatureString = implode('', [
+            $this->credentials->api_key,
+            $message->getNonce(),
+            'POST',
+            $this->selectedEndpointURL,
+            $sender,
+            $message->getTo(),
+            $message->getMessage(),
+            $message->getDisplayedMessage(),
+            $message->getSchedule(),
+            $message->getDeliveryReceiptCallback(),
+            $this->credentials->api_secret,
+        ]);
 
-        $signature = hash('sha512', $string);
-        /*signature*/
+        $signature = hash('sha512', $signatureString);
 
         $payload = json_encode(array_merge(
             $message->toArray(), 
@@ -171,7 +177,7 @@ class Client
                 'apiKey' => $this->credentials->api_key,
                 'sender' => $sender,
             ]
-        )); // json DATA
+        ));
 
         $response = $this->getHttpClient()->post($this->apiUrl . $this->selectedEndpointURL, [
             'http_errors' => false,
@@ -186,37 +192,38 @@ class Client
             'body' => $payload,
         ]);
 
-        $status = $response->getStatusCode();
-
-        if (($status < 200 || $status > 299)) {
-            $e = $this->getException($response);
-
-            if ($e) {
-                $e->setEntity($payload);
-
-                throw $e;
-            }
-        }
-
+        $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        return json_decode($response->getBody()->getContents(), true);
+        // Handle HTTP errors
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
+            $e = $this->getException($response);
+            $e->setEntity($payload);
+            throw $e;
+        }
+
+        return new SendResponse(
+            data: $body,
+            errorCode: $body['error']['code'] ?? -1,
+            errorMessage: $body['error']['message'] ?? 'Unknown error'
+        );
     }
 
-    public function get(string $id): ?array
+    public function get(string $id): StatusResponse
     {
         $nonce = time();
 
-        /*signature*/
-        $string = $this->credentials->api_key;
-        $string .= $nonce;
-        $string .= "GET";
-        $string .= $this->selectedEndpointURL;
-        $string .= $id;
-        $string .= $this->credentials->api_secret;
+        // Build signature
+        $signatureString = implode('', [
+            $this->credentials->api_key,
+            $nonce,
+            'GET',
+            $this->selectedEndpointURL,
+            $id,
+            $this->credentials->api_secret,
+        ]);
 
-        $signature = hash('sha512', $string);
-        /*signature*/
+        $signature = hash('sha512', $signatureString);
 
         $payload = json_encode([
             'apiKey' => $this->credentials->api_key,
@@ -237,37 +244,38 @@ class Client
             'body' => $payload,
         ]);
 
-        $status = $response->getStatusCode();
-
-        if (($status < 200 || $status > 299)) {
-            $e = $this->getException($response);
-
-            if ($e) {
-                $e->setEntity($payload);
-
-                throw $e;
-            }
-        }
-
+        $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        return json_decode($response->getBody()->getContents(), true);
+        // Handle HTTP errors
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
+            $e = $this->getException($response);
+            $e->setEntity($payload);
+            throw $e;
+        }
+
+        return new StatusResponse(
+            data: $body,
+            errorCode: $body['error']['code'] ?? -1,
+            errorMessage: $body['error']['message'] ?? 'Unknown error'
+        );
     }
 
-    public function delete(string $id): ?array
+    public function delete(string $id): DeleteResponse
     {
         $nonce = time();
 
-        /*signature*/
-        $string = $this->credentials->api_key;
-        $string .= $nonce;
-        $string .= "DELETE";
-        $string .= $this->selectedEndpointURL;
-        $string .= $id;
-        $string .= $this->credentials->api_secret;
+        // Build signature
+        $signatureString = implode('', [
+            $this->credentials->api_key,
+            $nonce,
+            'DELETE',
+            $this->selectedEndpointURL,
+            $id,
+            $this->credentials->api_secret,
+        ]);
 
-        $signature = hash('sha512', $string);
-        /*signature*/
+        $signature = hash('sha512', $signatureString);
 
         $payload = json_encode([
             'apiKey' => $this->credentials->api_key,
@@ -288,36 +296,37 @@ class Client
             'body' => $payload,
         ]);
 
-        $status = $response->getStatusCode();
-
-        if (($status < 200 || $status > 299)) {
-            $e = $this->getException($response);
-
-            if ($e) {
-                $e->setEntity($payload);
-
-                throw $e;
-            }
-        }
-
+        $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        return json_decode($response->getBody()->getContents(), true);
+        // Handle HTTP errors
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
+            $e = $this->getException($response);
+            $e->setEntity($payload);
+            throw $e;
+        }
+
+        return new DeleteResponse(
+            data: $body,
+            errorCode: $body['error']['code'] ?? -1,
+            errorMessage: $body['error']['message'] ?? 'Unknown error'
+        );
     }
 
-    public function balance(): ?array
+    public function balance(): BalanceResponse
     {
         $nonce = time();
 
-        /*signature*/
-        $string = $this->credentials->api_key;
-        $string .= $nonce;
-        $string .= "BALANCE";
-        $string .= $this->selectedEndpointURL;
-        $string .= $this->credentials->api_secret;
+        // Build signature
+        $signatureString = implode('', [
+            $this->credentials->api_key,
+            $nonce,
+            'BALANCE',
+            $this->selectedEndpointURL,
+            $this->credentials->api_secret,
+        ]);
 
-        $signature = hash('sha512', $string);
-        /*signature*/
+        $signature = hash('sha512', $signatureString);
 
         $payload = json_encode([
             'apiKey' => $this->credentials->api_key,
@@ -337,21 +346,21 @@ class Client
             'body' => $payload,
         ]);
 
-        $status = $response->getStatusCode();
-
-        if (($status < 200 || $status > 299)) {
-            $e = $this->getException($response);
-
-            if ($e) {
-                $e->setEntity($payload);
-
-                throw $e;
-            }
-        }
-
+        $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        return json_decode($response->getBody()->getContents(), true);
+        // Handle HTTP errors
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
+            $e = $this->getException($response);
+            $e->setEntity($payload);
+            throw $e;
+        }
+
+        return new BalanceResponse(
+            data: $body,
+            errorCode: $body['error']['code'] ?? -1,
+            errorMessage: $body['error']['message'] ?? 'Unknown error'
+        );
     }
 
     public function getExceptionErrorHandler(): callable
