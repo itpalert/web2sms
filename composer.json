@@ -3,7 +3,7 @@
     "description": "Web2sms for laravel.",
     "keywords": ["notifications", "web2sms"],
     "license": "MIT",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "authors": [
         {
             "name": "Gere Attila",
@@ -17,7 +17,8 @@
     "require-dev": {
         "guzzlehttp/guzzle": "^7.2",
         "mockery/mockery": "^1.0",
-        "orchestra/testbench": "^6.0|^7.0|^8.0|^9.0"
+        "orchestra/testbench": "^6.0|^7.0|^8.0|^9.0",
+        "phpunit/phpunit": "^11.5"
     },
     "autoload": {
         "psr-4": {
@@ -28,6 +29,9 @@
         "psr-4": {
             "ITPalert\\Web2sms\\Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "test": "phpunit"
     },
     "extra": {
         "laravel": {

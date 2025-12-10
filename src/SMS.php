@@ -130,7 +130,7 @@ class SMS
 
     public function setMessage(string $message): self
     {
-        if ($this->getType() === 'text' && ! self::isGsm7($this->message)) {
+        if ($this->getType() === 'text' && ! self::isGsm7($message)) {
             $this->message = (new Converter())->convertUtf8ToGsm($message, true, '?');
         }
         else {
