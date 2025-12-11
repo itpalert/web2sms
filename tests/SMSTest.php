@@ -169,7 +169,6 @@ class SMSTest extends TestCase
         $this->assertArrayHasKey('sender', $array);
         $this->assertArrayHasKey('recipient', $array);
         $this->assertArrayHasKey('message', $array);
-        $this->assertArrayHasKey('nonce', $array);
         $this->assertEquals('ALERT', $array['sender']);
         $this->assertEquals('0712345678', $array['recipient']);
         $this->assertEquals('Test message', $array['message']);
@@ -193,23 +192,5 @@ class SMSTest extends TestCase
         $this->assertEquals('2024-12-31 10:30:00', $array['scheduleDatetime']);
         $this->assertEquals('https://example.com/callback', $array['callbackUrl']);
         $this->assertEquals('Public', $array['visibleMessage']);
-    }
-
-    public function test_nonce_is_generated_automatically()
-    {
-        $sms = new SMS('0712345678', 'ALERT', 'Test', 'text');
-        $nonce = $sms->getNonce();
-
-        $this->assertIsString($nonce);
-        $this->assertGreaterThan(0, (int)$nonce);
-    }
-
-    public function test_nonce_is_consistent()
-    {
-        $sms = new SMS('0712345678', 'ALERT', 'Test', 'text');
-        $nonce1 = $sms->getNonce();
-        $nonce2 = $sms->getNonce();
-
-        $this->assertEquals($nonce1, $nonce2);
     }
 }

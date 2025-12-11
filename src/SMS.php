@@ -1,6 +1,5 @@
 <?php
 
-
 namespace ITPalert\Web2sms;
 
 use InvalidArgumentException;
@@ -20,9 +19,10 @@ class SMS
      */
     protected string $type = 'text';
 
-    protected string $message = '';
-
-    protected string $nonce = '';
+    /**
+     * @var string
+     */
+    protected string $originalMessage = '';
 
     protected ?string $deliveryReceiptCallback = null;
 
@@ -130,28 +130,28 @@ class SMS
 
     public function setMessage(string $message): self
     {
-        if ($this->getType() === 'text' && ! self::isGsm7($message)) {
-            $this->message = (new Converter())->convertUtf8ToGsm($message, true, '?');
-        }
-        else {
-            $this->message = $message;
-        }
+        $this->originalMessage = $message;
 
         return $this;
     }
     
     public function getMessage(): string
     {
-        return $this->message;
-    }
-
-    public function getNonce(): string
-    {
-        if(!$this->nonce) {
-            $this->nonce = time();
+        if ($this->type === 'text' && ! self::isGsm7($this->originalMessage)) {
+            return (new Converter())->convertUtf8ToGsm($this->originalMessage, true, '?');
         }
 
-        return $this->nonce;
+        return $this->originalMessage;
+    }
+
+    /**
+     * Get the original message before any conversion
+     *
+     * @return string
+     */
+    public function getOriginalMessage(): string
+    {
+        return $this->originalMessage;
     }
 
     protected static function isGsm7(string $message): bool
@@ -214,7 +214,6 @@ class SMS
             'recipient' => $this->getTo(),
             'message' => $this->getMessage(),
             'validityDatetime' => '',
-            'nonce' => $this->getNonce(),
         ];
 
         if (!is_null($this->getDeliveryReceiptCallback())) {

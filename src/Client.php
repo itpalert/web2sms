@@ -17,10 +17,10 @@ use ITPalert\Web2sms\Responses\BalanceResponse;
 
 class Client
 {
-    const SMS_PLATFORM_URL            = "https://www.web2sms.ro";        // Mandatory 
+    const SMS_PLATFORM_URL = "https://www.web2sms.ro";        // Mandatory 
 
-    const SMS_URL_PREPAIID            = "/prepaid/message";              // Mandatory
-    const SMS_URL_POSTPAID            = "/send/message";                 // Mandatory
+    const SMS_URL_PREPAIID = "/prepaid/message";              // Mandatory
+    const SMS_URL_POSTPAID = "/send/message";                 // Mandatory
 
     /**
      * API Credentials
@@ -35,7 +35,6 @@ class Client
      * @var \Psr\Http\Client\ClientInterface
      */
     protected $client;
-
 
     /**
      * @var array
@@ -62,8 +61,9 @@ class Client
     /**
      * Create a new Web2sms instance.
      *
-     * @param  \GuzzleHttp\Client  $http
-     * @param  array  $config
+     * @param  CredentialsInterface  $credentials
+     * @param  array  $options
+     * @param  \Psr\Http\Client\ClientInterface|null  $client
      */
     public function __construct( 
         CredentialsInterface $credentials,
@@ -77,9 +77,7 @@ class Client
         $this->setHttpClient($client);
 
         // Make sure we know how to use the credentials
-        if (
-            !($credentials instanceof Basic)
-        ) {
+        if (!($credentials instanceof Basic)) {
             throw new RuntimeException('unknown credentials type: ' . $credentials::class);
         }
        
@@ -90,7 +88,7 @@ class Client
         $this->setApiUrl();
     }
 
-     /**
+    /**
      * Set the Http Client to used to make API requests.
      *
      * This allows the default http client to be swapped out for a HTTPlug compatible
@@ -138,11 +136,12 @@ class Client
         $message->verifyMessage();
 
         $sender = $message->getFrom() ?: ($this->options['sms_from'] ?? '');
+        $nonce = time();
 
         // Build signature
         $signatureString = implode('', [
             $this->credentials->api_key,
-            $message->getNonce(),
+            $nonce,
             'POST',
             $this->selectedEndpointURL,
             $sender,
@@ -161,6 +160,7 @@ class Client
             [
                 'apiKey' => $this->credentials->api_key,
                 'sender' => $sender,
+                'nonce' => $nonce,
             ]
         ));
 
