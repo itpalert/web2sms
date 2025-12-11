@@ -15,16 +15,18 @@ class Web2smsServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(Web2sms::class, function ($app) {
-            $config = $app['config']['services.web2sms'];
+            $config = $app['config']['services.web2sms'] ?? [];
+
+            if (empty($config)) {
+                throw new RuntimeException(
+                    'Web2sms configuration not found. Please add credentials to config/services.php'
+                );
+            }
 
             $httpClient = null;
 
-            if ($httpClient = $config['http_client'] ?? null) {
-                $httpClient = $app->make($httpClient);
-            } elseif (! class_exists('GuzzleHttp\Client')) {
-                throw new RuntimeException(
-                    'The Web2sms client requires a "psr/http-client-implementation" class such as Guzzle.'
-                );
+            if ($httpClientConfig = $config['http_client'] ?? null) {
+                $httpClient = $app->make($httpClientConfig);
             }
 
             return Web2sms::make($config, $httpClient)->client();
