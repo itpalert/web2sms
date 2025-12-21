@@ -2,77 +2,73 @@
 
 namespace ITPalert\Web2sms;
 
-use Psr\Http\Client\ClientInterface;
-use RuntimeException;
-
-use ITPalert\Web2sms\Credentials\CredentialsInterface;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\ClientInterface;
 use ITPalert\Web2sms\Credentials\Basic;
-
-use Psr\Http\Message\ResponseInterface;
-
+use ITPalert\Web2sms\Credentials\CredentialsInterface;
+use ITPalert\Web2sms\Responses\BalanceResponse;
+use ITPalert\Web2sms\Responses\DeleteResponse;
 use ITPalert\Web2sms\Responses\SendResponse;
 use ITPalert\Web2sms\Responses\StatusResponse;
-use ITPalert\Web2sms\Responses\DeleteResponse;
-use ITPalert\Web2sms\Responses\BalanceResponse;
+use Psr\Http\Message\ResponseInterface;
+use RuntimeException;
 
 class Client
 {
-    const SMS_PLATFORM_URL = "https://www.web2sms.ro";        // Mandatory 
+    public const SMS_PLATFORM_URL = 'https://www.web2sms.ro'; // Mandatory
 
-    const SMS_URL_PREPAIID = "/prepaid/message";              // Mandatory
-    const SMS_URL_POSTPAID = "/send/message";                 // Mandatory
+    public const SMS_URL_PREPAIID = '/prepaid/message'; // Mandatory
+    public const SMS_URL_POSTPAID = '/send/message'; // Mandatory
 
     /**
      * API Credentials
      *
      * @var CredentialsInterface
      */
-    protected $credentials;
+    protected CredentialsInterface $credentials;
 
     /**
-     * Http Client
+     * HTTP client used to make API requests (Guzzle).
      *
-     * @var \Psr\Http\Client\ClientInterface
+     * @var ClientInterface
      */
-    protected $client;
+    protected ClientInterface $client;
 
     /**
-     * @var array
+     * @var array<string, mixed>
      */
-    protected $options = [];
+    protected array $options = [];
 
     /**
-     * @string
+     * @var string
      */
-    public $apiUrl;
+    public string $apiUrl;
 
     /**
-     * @string
+     * @var string
      */
-    public $selectedEndpointURL;
+    public string $selectedEndpointURL;
 
     /**
-     * Error handler to use when reviewing API responses
+     * Error handler to use when reviewing API responses.
      *
-     * @var callable
+     * @var callable|null
      */
     protected $exceptionErrorHandler;
 
     /**
-     * Create a new Web2sms instance.
+     * Create a new Web2sms Client instance.
      *
-     * @param  CredentialsInterface  $credentials
-     * @param  array  $options
-     * @param  \Psr\Http\Client\ClientInterface|null  $client
+     * @param CredentialsInterface     $credentials
+     * @param array<string, mixed>     $options
+     * @param ClientInterface|null     $client
      */
-    public function __construct( 
+    public function __construct(
         CredentialsInterface $credentials,
         array $options = [],
         ?ClientInterface $client = null
     ) {
-        if (is_null($client)) {
-            $client = new \GuzzleHttp\Client();
-        }
+        $client ??= new GuzzleClient();
 
         $this->setHttpClient($client);
 
@@ -80,19 +76,15 @@ class Client
         if (!($credentials instanceof Basic)) {
             throw new RuntimeException('unknown credentials type: ' . $credentials::class);
         }
-       
-        $this->credentials = $credentials;
 
+        $this->credentials = $credentials;
         $this->options = array_merge($this->options, $options);
 
         $this->setApiUrl();
     }
 
     /**
-     * Set the Http Client to used to make API requests.
-     *
-     * This allows the default http client to be swapped out for a HTTPlug compatible
-     * replacement.
+     * Set the HTTP client used to make API requests (Guzzle).
      */
     public function setHttpClient(ClientInterface $client): self
     {
@@ -102,7 +94,7 @@ class Client
     }
 
     /**
-     * Get the Http Client used to make API requests.
+     * Get the HTTP client used to make API requests (Guzzle).
      */
     public function getHttpClient(): ClientInterface
     {
@@ -111,19 +103,14 @@ class Client
 
     public function setApiUrl(): self
     {
-        // Set the default URLs. Keep the constants for
-        // backwards compatibility
         $this->apiUrl = static::SMS_PLATFORM_URL;
-        
-        switch($this->credentials->accountType) {
+
+        switch ($this->credentials->accountType) {
             case 'postpaid':
                 $this->selectedEndpointURL = static::SMS_URL_POSTPAID;
                 break;
 
-            case 'prepaid' :
-                $this->selectedEndpointURL = static::SMS_URL_PREPAIID;
-                break;
-
+            case 'prepaid':
             default:
                 $this->selectedEndpointURL = static::SMS_URL_PREPAIID;
         }
@@ -138,7 +125,6 @@ class Client
         $sender = $message->getFrom() ?: ($this->options['sms_from'] ?? '');
         $nonce = time();
 
-        // Build signature
         $signatureString = implode('', [
             $this->credentials->api_key,
             $nonce,
@@ -156,7 +142,7 @@ class Client
         $signature = hash('sha512', $signatureString);
 
         $payload = json_encode(array_merge(
-            $message->toArray(), 
+            $message->toArray(),
             [
                 'apiKey' => $this->credentials->api_key,
                 'sender' => $sender,
@@ -164,15 +150,15 @@ class Client
             ]
         ));
 
-        $response = $this->getHttpClient()->post($this->apiUrl . $this->selectedEndpointURL, [
+        $response = $this->getHttpClient()->request('POST', $this->apiUrl . $this->selectedEndpointURL, [
             'http_errors' => false,
             'headers' => [
-                'Content-Type' => 'application/json', 
+                'Content-Type' => 'application/json',
                 'Content-length' => strlen($payload),
             ],
             'auth' => [
                 $this->credentials->api_key,
-                $signature
+                $signature,
             ],
             'body' => $payload,
         ]);
@@ -180,7 +166,6 @@ class Client
         $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        // Handle HTTP errors
         if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
             $e = $this->getException($response);
             $e->setEntity($payload);
@@ -190,7 +175,7 @@ class Client
         return new SendResponse(
             data: $body,
             errorCode: $body['error']['code'] ?? -1,
-            errorMessage: $body['error']['message'] ?? 'Unknown error'
+            errorMessage: $body['error']['message'] ?? 'Unknown error',
         );
     }
 
@@ -198,7 +183,6 @@ class Client
     {
         $nonce = time();
 
-        // Build signature
         $signatureString = implode('', [
             $this->credentials->api_key,
             $nonce,
@@ -214,17 +198,17 @@ class Client
             'apiKey' => $this->credentials->api_key,
             'id' => $id,
             'nonce' => $nonce,
-        ]); // json DATA
+        ]);
 
-        $response = $this->getHttpClient()->get($this->apiUrl . $this->selectedEndpointURL, [
+        $response = $this->getHttpClient()->request('GET', $this->apiUrl . $this->selectedEndpointURL, [
             'http_errors' => false,
             'headers' => [
-                'Content-Type' => 'application/json', 
+                'Content-Type' => 'application/json',
                 'Content-length' => strlen($payload),
             ],
             'auth' => [
                 $this->credentials->api_key,
-                $signature
+                $signature,
             ],
             'body' => $payload,
         ]);
@@ -232,7 +216,6 @@ class Client
         $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        // Handle HTTP errors
         if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
             $e = $this->getException($response);
             $e->setEntity($payload);
@@ -242,7 +225,7 @@ class Client
         return new StatusResponse(
             data: $body,
             errorCode: $body['error']['code'] ?? -1,
-            errorMessage: $body['error']['message'] ?? 'Unknown error'
+            errorMessage: $body['error']['message'] ?? 'Unknown error',
         );
     }
 
@@ -250,7 +233,6 @@ class Client
     {
         $nonce = time();
 
-        // Build signature
         $signatureString = implode('', [
             $this->credentials->api_key,
             $nonce,
@@ -266,17 +248,17 @@ class Client
             'apiKey' => $this->credentials->api_key,
             'id' => $id,
             'nonce' => $nonce,
-        ]); // json DATA
+        ]);
 
         $response = $this->getHttpClient()->request("DELETE", $this->apiUrl . $this->selectedEndpointURL, [
             'http_errors' => false,
             'headers' => [
-                'Content-Type' => 'application/json', 
+                'Content-Type' => 'application/json',
                 'Content-length' => strlen($payload),
             ],
             'auth' => [
                 $this->credentials->api_key,
-                $signature
+                $signature,
             ],
             'body' => $payload,
         ]);
@@ -284,7 +266,6 @@ class Client
         $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        // Handle HTTP errors
         if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
             $e = $this->getException($response);
             $e->setEntity($payload);
@@ -294,7 +275,7 @@ class Client
         return new DeleteResponse(
             data: $body,
             errorCode: $body['error']['code'] ?? -1,
-            errorMessage: $body['error']['message'] ?? 'Unknown error'
+            errorMessage: $body['error']['message'] ?? 'Unknown error',
         );
     }
 
@@ -302,7 +283,6 @@ class Client
     {
         $nonce = time();
 
-        // Build signature
         $signatureString = implode('', [
             $this->credentials->api_key,
             $nonce,
@@ -316,17 +296,17 @@ class Client
         $payload = json_encode([
             'apiKey' => $this->credentials->api_key,
             'nonce' => $nonce,
-        ]); // json DATA
+        ]);
 
-        $response = $this->getHttpClient()->request("BALANCE", $this->apiUrl . $this->selectedEndpointURL, [
+        $response = $this->getHttpClient()->request('BALANCE', $this->apiUrl . $this->selectedEndpointURL, [
             'http_errors' => false,
             'headers' => [
-                'Content-Type' => 'application/json', 
+                'Content-Type' => 'application/json',
                 'Content-length' => strlen($payload),
             ],
             'auth' => [
                 $this->credentials->api_key,
-                $signature
+                $signature,
             ],
             'body' => $payload,
         ]);
@@ -334,7 +314,6 @@ class Client
         $body = json_decode($response->getBody()->getContents(), true);
         $response->getBody()->rewind();
 
-        // Handle HTTP errors
         if ($response->getStatusCode() < 200 || $response->getStatusCode() > 299) {
             $e = $this->getException($response);
             $e->setEntity($payload);
@@ -344,7 +323,7 @@ class Client
         return new BalanceResponse(
             data: $body,
             errorCode: $body['error']['code'] ?? -1,
-            errorMessage: $body['error']['message'] ?? 'Unknown error'
+            errorMessage: $body['error']['message'] ?? 'Unknown error',
         );
     }
 
@@ -359,6 +338,6 @@ class Client
 
     protected function getException(ResponseInterface $response)
     {
-        return $this->getExceptionErrorHandler()($response);
+        return ($this->getExceptionErrorHandler())($response);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace ITPalert\Web2sms;
 
-use Psr\Http\Client\ClientInterface;
+use GuzzleHttp\ClientInterface;
 use RuntimeException;
 
 use ITPalert\Web2sms\Credentials\Basic;

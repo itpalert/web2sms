@@ -1,6 +1,6 @@
 <?php
 
-namespace ITPalert\Web2sms\Tests;
+namespace ITPalert\Web2sms\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use ITPalert\Web2sms\SMS;

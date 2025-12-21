@@ -1,6 +1,6 @@
 <?php
 
-namespace ITPalert\Web2sms\Tests;
+namespace ITPalert\Web2sms\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use ITPalert\Web2sms\Client;
@@ -11,7 +11,7 @@ use ITPalert\Web2sms\Responses\StatusResponse;
 use ITPalert\Web2sms\Responses\DeleteResponse;
 use ITPalert\Web2sms\Responses\BalanceResponse;
 use ITPalert\Web2sms\Exceptions\Exception;
-use Psr\Http\Client\ClientInterface;
+use GuzzleHttp\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use GuzzleHttp\Client as GuzzleClient;
@@ -21,26 +21,16 @@ class ClientTest extends TestCase
     private function createMockHttpClient(int $statusCode, array $body): ClientInterface
     {
         $stream = $this->createMock(StreamInterface::class);
-        $stream->method('getContents')
-            ->willReturn(json_encode($body));
+        $stream->method('getContents')->willReturn(json_encode($body));
         $stream->method('rewind');
-        $stream->method('__toString')
-            ->willReturn(json_encode($body));
+        $stream->method('__toString')->willReturn(json_encode($body));
 
         $response = $this->createMock(ResponseInterface::class);
-        $response->method('getStatusCode')
-            ->willReturn($statusCode);
-        $response->method('getBody')
-            ->willReturn($stream);
+        $response->method('getStatusCode')->willReturn($statusCode);
+        $response->method('getBody')->willReturn($stream);
 
-        // Create a mock Guzzle client (which has the methods we need)
-        $httpClient = $this->createMock(GuzzleClient::class);
-        $httpClient->method('request')
-            ->willReturn($response);
-        $httpClient->method('post')
-            ->willReturn($response);
-        $httpClient->method('get')
-            ->willReturn($response);
+        $httpClient = $this->createMock(ClientInterface::class);
+        $httpClient->method('request')->willReturn($response);
 
         return $httpClient;
     }

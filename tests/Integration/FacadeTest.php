@@ -1,11 +1,11 @@
 <?php
 
-namespace ITPalert\Web2sms\Tests;
+namespace ITPalert\Web2sms\Tests\Integration;
 
 use Orchestra\Testbench\TestCase;
-use ITPalert\Web2sms\Facades\Web2sms;
+use ITPalert\Web2sms\Client;
 use ITPalert\Web2sms\Web2smsServiceProvider;
-use Illuminate\Support\Facades\Facade;
+use ITPalert\Web2sms\Facades\Web2sms;
 
 class FacadeTest extends TestCase
 {
@@ -33,14 +33,13 @@ class FacadeTest extends TestCase
 
     public function test_facade_accessor_returns_correct_class()
     {
-        // Use reflection to access protected method
         $reflection = new \ReflectionClass(Web2sms::class);
         $method = $reflection->getMethod('getFacadeAccessor');
         $method->setAccessible(true);
-        
+
         $accessor = $method->invoke(null);
-        
-        $this->assertEquals(\ITPalert\Web2sms\Web2sms::class, $accessor);
+
+        $this->assertEquals(Client::class, $accessor);
     }
 
     public function test_facade_is_properly_registered()
@@ -51,7 +50,7 @@ class FacadeTest extends TestCase
     public function test_facade_resolves_from_container()
     {
         $instance = Web2sms::getFacadeRoot();
-        
-        $this->assertInstanceOf(\ITPalert\Web2sms\Client::class, $instance);
+
+        $this->assertInstanceOf(Client::class, $instance);
     }
 }

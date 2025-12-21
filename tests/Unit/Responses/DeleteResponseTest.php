@@ -1,6 +1,6 @@
 <?php
 
-namespace ITPalert\Web2sms\Tests\Responses;
+namespace ITPalert\Web2sms\Tests\Unit\Responses;
 
 use PHPUnit\Framework\TestCase;
 use ITPalert\Web2sms\Responses\DeleteResponse;

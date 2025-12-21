@@ -1,11 +1,11 @@
 <?php
 
-namespace ITPalert\Web2sms\Tests;
+namespace ITPalert\Web2sms\Tests\Integration;
 
 use Orchestra\Testbench\TestCase;
+use ITPalert\Web2sms\Client;
 use ITPalert\Web2sms\Web2sms;
 use ITPalert\Web2sms\Web2smsServiceProvider;
-use ITPalert\Web2sms\Client;
 use ITPalert\Web2sms\Facades\Web2sms as Web2smsFacade;
 
 class LaravelIntegrationTest extends TestCase
@@ -32,10 +32,10 @@ class LaravelIntegrationTest extends TestCase
         ]);
     }
 
-    public function test_service_provider_registers_singleton()
+    public function test_service_provider_registers_singleton_client()
     {
-        $instance1 = $this->app->make(Web2sms::class);
-        $instance2 = $this->app->make(Web2sms::class);
+        $instance1 = $this->app->make(Client::class);
+        $instance2 = $this->app->make(Client::class);
 
         $this->assertInstanceOf(Client::class, $instance1);
         $this->assertSame($instance1, $instance2);
@@ -43,7 +43,7 @@ class LaravelIntegrationTest extends TestCase
 
     public function test_service_provider_loads_config_from_services()
     {
-        $client = $this->app->make(Web2sms::class);
+        $client = $this->app->make(Client::class);
 
         $this->assertInstanceOf(Client::class, $client);
         $this->assertEquals('https://www.web2sms.ro', $client->apiUrl);
@@ -55,9 +55,9 @@ class LaravelIntegrationTest extends TestCase
         $this->app['config']->set('services.web2sms.account_type', 'postpaid');
 
         // Force rebind
-        $this->app->forgetInstance(Web2sms::class);
+        $this->app->forgetInstance(Client::class);
 
-        $client = $this->app->make(Web2sms::class);
+        $client = $this->app->make(Client::class);
 
         $this->assertEquals('/send/message', $client->selectedEndpointURL);
     }
@@ -73,7 +73,7 @@ class LaravelIntegrationTest extends TestCase
         $provider = new Web2smsServiceProvider($app);
         $provider->register();
 
-        $app->make(Web2sms::class);
+        $app->make(Client::class);
     }
 
     public function test_facade_resolves_to_client()
@@ -85,13 +85,12 @@ class LaravelIntegrationTest extends TestCase
 
     public function test_facade_can_call_client_methods()
     {
-        // Mock the HTTP client to avoid actual API calls
-        $mockHttpClient = $this->createMock(\GuzzleHttp\Client::class);
-        
+        $mockHttpClient = $this->createMock(\GuzzleHttp\ClientInterface::class);
+
         $stream = $this->createMock(\Psr\Http\Message\StreamInterface::class);
         $stream->method('getContents')->willReturn(json_encode([
             'id' => 'test_id',
-            'error' => ['code' => 0, 'message' => 'OK']
+            'error' => ['code' => 0, 'message' => 'OK'],
         ]));
         $stream->method('rewind');
 
@@ -99,25 +98,27 @@ class LaravelIntegrationTest extends TestCase
         $response->method('getStatusCode')->willReturn(201);
         $response->method('getBody')->willReturn($stream);
 
-        $mockHttpClient->method('post')->willReturn($response);
+        // IMPORTANT: Client::send() now uses request('POST', ...)
+        $mockHttpClient->method('request')->willReturn($response);
 
-        // Replace the bound instance with one using our mock
-        $this->app->singleton(Web2sms::class, function ($app) use ($mockHttpClient) {
+        // Rebind Client::class so Facade resolves it
+        $this->app->singleton(\ITPalert\Web2sms\Client::class, function ($app) use ($mockHttpClient) {
             $config = $app['config']['services.web2sms'];
-            return Web2sms::make($config, $mockHttpClient)->client();
+
+            return \ITPalert\Web2sms\Web2sms::make($config, $mockHttpClient)->client();
         });
 
         $sms = new \ITPalert\Web2sms\SMS('0712345678', 'TEST', 'Test message', 'text');
-        $response = Web2smsFacade::send($sms);
+        $sendResponse = \ITPalert\Web2sms\Facades\Web2sms::send($sms);
 
-        $this->assertTrue($response->isSuccess());
-        $this->assertEquals('test_id', $response->getMessageId());
+        $this->assertTrue($sendResponse->isSuccess());
+        $this->assertEquals('test_id', $sendResponse->getMessageId());
     }
 
     public function test_service_provider_uses_custom_http_client_from_config()
     {
         $customClient = new \GuzzleHttp\Client();
-        
+
         $this->app->bind('custom.http.client', function () use ($customClient) {
             return $customClient;
         });
@@ -125,16 +126,15 @@ class LaravelIntegrationTest extends TestCase
         $this->app['config']->set('services.web2sms.http_client', 'custom.http.client');
 
         // Force rebind
-        $this->app->forgetInstance(Web2sms::class);
+        $this->app->forgetInstance(Client::class);
 
-        $client = $this->app->make(Web2sms::class);
+        $client = $this->app->make(Client::class);
 
         $this->assertInstanceOf(Client::class, $client);
     }
 
     public function test_multiple_account_configurations()
     {
-        // Test that different configurations can be used
         $this->app['config']->set('services.web2sms', [
             'key' => 'key1',
             'secret' => 'secret1',
@@ -142,7 +142,10 @@ class LaravelIntegrationTest extends TestCase
             'account_type' => 'prepaid',
         ]);
 
-        $client1 = $this->app->make(Web2sms::class);
+        $this->app->forgetInstance(Client::class);
+
+        $client1 = $this->app->make(Client::class);
+
         $this->assertEquals('/prepaid/message', $client1->selectedEndpointURL);
     }
 }

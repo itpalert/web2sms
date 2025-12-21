@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true">
-    <testsuites>
-        <testsuite name="Unit Tests">
-            <directory>tests</directory>
-            <exclude>tests/LaravelIntegrationTest.php</exclude>
-            <exclude>tests/FacadeTest.php</exclude>
-        </testsuite>
-        <testsuite name="Laravel Integration">
-            <file>tests/LaravelIntegrationTest.php</file>
-            <file>tests/FacadeTest.php</file>
-        </testsuite>
-    </testsuites>
+   <testsuites>
+    <testsuite name="Unit">
+        <directory>tests/Unit</directory>
+    </testsuite>
+
+    <testsuite name="Integration">
+        <directory>tests/Integration</directory>
+    </testsuite>
+</testsuites>
     <source>
         <include>
             <directory suffix=".php">src</directory>

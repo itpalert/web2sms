@@ -2,6 +2,8 @@
 
 namespace ITPalert\Web2sms\Credentials;
 
+use InvalidArgumentException;
+
 /**
  * Class Basic
  * Read-only container for api key and secret.
@@ -24,9 +26,17 @@ class Basic implements CredentialsInterface
      */
     public function __construct($key, $secret, $accountType = 'prepaid')
     {
-        $this->credentials['api_key'] = (string)$key;
-        $this->credentials['api_secret'] = (string)$secret;
-        $this->credentials['accountType'] = (string)$accountType;
+        $accountType = (string) $accountType;
+
+        if (!in_array($accountType, ['prepaid', 'postpaid'], true)) {
+            throw new InvalidArgumentException(
+                'Invalid account type. Allowed values: prepaid, postpaid.'
+            );
+        }
+
+        $this->credentials['api_key'] = (string) $key;
+        $this->credentials['api_secret'] = (string) $secret;
+        $this->credentials['accountType'] = $accountType;
     }
 
     /**

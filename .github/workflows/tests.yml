@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  phpunit:
+    name: PHP ${{ matrix.php }} / ${{ matrix.deps }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.2", "8.3"]
+        deps: ["lowest", "locked"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Get Composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-${{ matrix.php }}-${{ matrix.deps }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php }}-${{ matrix.deps }}-
+            ${{ runner.os }}-php-${{ matrix.php }}-
+
+      - name: Install dependencies (lowest)
+        if: matrix.deps == 'lowest'
+        run: |
+          composer update --prefer-dist --no-interaction --no-progress --prefer-lowest
+
+      - name: Install dependencies (locked)
+        if: matrix.deps == 'locked'
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run all tests
+        run: |
+          composer test
+
+      - name: Run Unit suite
+        run: |
+          composer test:unit
+
+      - name: Run Integration suite
+        run: |
+          composer test:integration
