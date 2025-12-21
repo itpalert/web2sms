@@ -14,7 +14,8 @@ class Web2smsServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton(Web2sms::class, function ($app) {
+        // Bind the Client class (not Web2sms)
+        $this->app->singleton(Client::class, function ($app) {
             $config = $app['config']['services.web2sms'] ?? [];
 
             if (empty($config)) {
