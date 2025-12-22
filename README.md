@@ -414,22 +414,61 @@ $client = new Client($credentials, [], $httpClient);
 ```
 
 ### Laravel: Dependency Injection
+
+The Client class can be injected directly into your Laravel services:
 ```php
-use ITPalert\Web2sms\Web2sms;
+use ITPalert\Web2sms\Client;
+use ITPalert\Web2sms\SMS;
 
 class NotificationService
 {
     public function __construct(
-        private Web2sms $web2sms
+        private Client $web2sms
     ) {}
     
-    public function sendSMS($to, $message)
+    public function sendVerification($user)
     {
-        $sms = new SMS($to, '', $message, 'text');
-        return $this->web2sms->send($sms);
+        $code = random_int(100000, 999999);
+        
+        $sms = new SMS(
+            to: $user->phone,
+            from: '',
+            message: "Your verification code: {$code}",
+            type: 'text'
+        );
+        
+        $response = $this->web2sms->send($sms);
+        
+        if ($response->isSuccess()) {
+            session(['verification_code' => $code]);
+            return true;
+        }
+        
+        return false;
     }
 }
 ```
+
+**Or use the Facade for simpler syntax:**
+```php
+use ITPalert\Web2sms\Facades\Web2sms;
+use ITPalert\Web2sms\SMS;
+
+class NotificationService
+{
+    public function sendVerification($user)
+    {
+        $code = random_int(100000, 999999);
+        
+        $sms = new SMS($user->phone, '', "Code: {$code}", 'text');
+        $response = Web2sms::send($sms);
+        
+        return $response->isSuccess();
+    }
+}
+```
+
+Both approaches work seamlessly with Laravel's service container.
 
 ### Bulk SMS Sending
 ```php
