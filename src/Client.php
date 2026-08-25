@@ -4,6 +4,7 @@ namespace ITPalert\Web2sms;
 
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\ClientInterface;
+use ITPalert\Web2sms\Contracts\Client as ClientContract;
 use ITPalert\Web2sms\Credentials\Basic;
 use ITPalert\Web2sms\Credentials\CredentialsInterface;
 use ITPalert\Web2sms\Responses\BalanceResponse;
@@ -13,7 +14,7 @@ use ITPalert\Web2sms\Responses\StatusResponse;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 
-class Client
+class Client implements ClientContract
 {
     public const SMS_PLATFORM_URL = 'https://www.web2sms.ro'; // Mandatory
 

@@ -279,6 +279,56 @@ if ($response->isSuccess()) {
 - `getBalance()` - Returns balance as string
 - Plus all base response methods
 
+## Testing Your Application
+
+Sending a text costs money per attempt and arrives on a real handset, so the
+package refuses to do it from a test suite unless you say otherwise. Under the
+`testing` environment the driver defaults to `fake`: messages are recorded, not
+delivered, whether or not the test that triggered one knew SMS was involved.
+
+### Drivers
+
+Set `services.web2sms.driver` to choose:
+
+| Driver | Behaviour |
+|---|---|
+| `api` | Sends for real. The default everywhere except `testing`. |
+| `fake` / `array` / `null` | Records and swallows. |
+| `log` | Records, and writes the message to the PSR-3 logger. Useful locally: you read what the customer would have received without spending credit. |
+
+### Asserting
+
+```php
+use ITPalert\Web2sms\Facades\Web2sms;
+use ITPalert\Web2sms\SMS;
+
+$fake = Web2sms::fake();
+
+// ... code under test ...
+
+$fake->assertSentCount(1)
+     ->assertSentTo('0712345678')
+     ->assertSent(fn (SMS $sms) => str_contains($sms->getMessage(), 'expires'))
+     ->assertNotSent(fn (SMS $sms) => $sms->getTo() === '0700000000');
+
+$fake->assertNothingSent();
+```
+
+`Web2sms::fake()` is only needed to get hold of the recorder, or to switch a
+single test away from a driver set to `api`. Calling it twice returns the same
+recorder rather than discarding what was already captured.
+
+The fake still runs `SMS::verifyMessage()`, so a message with no recipient or no
+body fails in tests exactly as it would against the API. A fake that accepts
+anything hides bugs until production.
+
+### Exercising the real client without sending
+
+Point `services.web2sms.http_client` at a container binding for a Guzzle client
+backed by a `MockHandler`. The genuine signing, endpoint selection and response
+parsing all run, and nothing leaves the machine. This package's own integration
+tests are built that way; see `tests/TestCase.php`.
+
 ## Error Handling
 
 ### API-Level Errors (Non-Zero Error Code)
@@ -614,7 +664,7 @@ if ($requiresDiacritics) {
 $response = $client->send($sms);
 ```
 
-## Testing
+## Testing This Package
 
 Run the test suite:
 ```bash
@@ -624,10 +674,10 @@ composer test
 Run specific test suites:
 ```bash
 # Unit tests only
-vendor/bin/phpunit --testsuite "Unit Tests"
+vendor/bin/phpunit --testsuite Unit
 
 # Laravel integration tests only
-vendor/bin/phpunit --testsuite "Laravel Integration"
+vendor/bin/phpunit --testsuite Integration
 ```
 
 ## Contributing

@@ -2,35 +2,13 @@
 
 namespace ITPalert\Web2sms\Tests\Integration;
 
-use Orchestra\Testbench\TestCase;
 use ITPalert\Web2sms\Client;
-use ITPalert\Web2sms\Web2smsServiceProvider;
+use ITPalert\Web2sms\Contracts\Client as ClientContract;
 use ITPalert\Web2sms\Facades\Web2sms;
+use ITPalert\Web2sms\Tests\TestCase;
 
 class FacadeTest extends TestCase
 {
-    protected function getPackageProviders($app)
-    {
-        return [Web2smsServiceProvider::class];
-    }
-
-    protected function getPackageAliases($app)
-    {
-        return [
-            'Web2sms' => Web2sms::class,
-        ];
-    }
-
-    protected function getEnvironmentSetUp($app)
-    {
-        $app['config']->set('services.web2sms', [
-            'key' => 'test_key',
-            'secret' => 'test_secret',
-            'sms_from' => 'TEST',
-            'account_type' => 'prepaid',
-        ]);
-    }
-
     public function test_facade_accessor_returns_correct_class()
     {
         $reflection = new \ReflectionClass(Web2sms::class);
@@ -39,18 +17,22 @@ class FacadeTest extends TestCase
 
         $accessor = $method->invoke(null);
 
-        $this->assertEquals(Client::class, $accessor);
+        // The facade resolves the contract now, so a fake can stand behind it
+        // without pretending to be the concrete HTTP client.
+        $this->assertEquals(ClientContract::class, $accessor);
     }
 
     public function test_facade_is_properly_registered()
     {
-        $this->assertTrue(class_exists(\ITPalert\Web2sms\Facades\Web2sms::class));
+        $this->assertTrue(class_exists(Web2sms::class));
     }
 
     public function test_facade_resolves_from_container()
     {
         $instance = Web2sms::getFacadeRoot();
 
+        $this->assertInstanceOf(ClientContract::class, $instance);
+        // The base test case selects the api driver, so this is the real one.
         $this->assertInstanceOf(Client::class, $instance);
     }
 }
